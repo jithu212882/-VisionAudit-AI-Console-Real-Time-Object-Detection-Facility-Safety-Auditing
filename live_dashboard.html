@@ -1,0 +1,918 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>VisionAudit - Real-Time Visual AI Telemetry & Audit Console</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg-base: #090d16;
+            --bg-surface: #0f172a;
+            --bg-card: #141e33;
+            --bg-card-hover: #1a2744;
+            --border-subtle: #1e293b;
+            --border-glow: rgba(56, 189, 248, 0.25);
+            --text-primary: #f8fafc;
+            --text-secondary: #94a3b8;
+            --text-muted: #64748b;
+            --accent: #38bdf8;
+            --accent-glow: rgba(56, 189, 248, 0.4);
+            --success: #10b981;
+            --success-glow: rgba(16, 185, 129, 0.4);
+            --danger: #ef4444;
+            --danger-glow: rgba(239, 68, 68, 0.4);
+            --warning: #f59e0b;
+            --warning-glow: rgba(245, 158, 11, 0.4);
+            --green-box: #00ff00;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            background-color: var(--bg-base);
+            color: var(--text-primary);
+            min-height: 100vh;
+            padding: 20px 24px 32px;
+            overflow-x: hidden;
+        }
+
+        /* Top Header */
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 16px;
+            padding: 14px 20px;
+            background: linear-gradient(135deg, rgba(20, 30, 51, 0.8) 0%, rgba(15, 23, 42, 0.8) 100%);
+            border: 1px solid var(--border-subtle);
+            border-radius: 12px;
+            backdrop-filter: blur(12px);
+            margin-bottom: 24px;
+            box-shadow: 0 4px 24px rgba(0, 0, 0, 0.4);
+        }
+
+        .brand {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .brand-icon {
+            width: 36px;
+            height: 36px;
+            border-radius: 8px;
+            background: linear-gradient(135deg, #0284c7 0%, #10b981 100%);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 18px;
+            font-weight: 800;
+            color: #fff;
+            box-shadow: 0 0 16px var(--accent-glow);
+        }
+
+        .brand-title {
+            font-size: 20px;
+            font-weight: 700;
+            letter-spacing: -0.02em;
+            background: linear-gradient(90deg, #f8fafc 0%, #38bdf8 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .brand-subtitle {
+            font-size: 11px;
+            color: var(--text-muted);
+            font-family: 'JetBrains Mono', monospace;
+            text-transform: uppercase;
+            letter-spacing: 0.08em;
+        }
+
+        .controls {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            flex-wrap: wrap;
+        }
+
+        .input-group {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            background: var(--bg-surface);
+            padding: 4px 8px;
+            border: 1px solid var(--border-subtle);
+            border-radius: 8px;
+        }
+
+        .input-group label {
+            font-size: 12px;
+            color: var(--text-muted);
+            font-family: 'JetBrains Mono', monospace;
+            white-space: nowrap;
+        }
+
+        input[type="text"] {
+            background: transparent;
+            border: none;
+            color: var(--text-primary);
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 13px;
+            outline: none;
+            padding: 6px 4px;
+        }
+
+        .toggle-label {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            font-size: 13px;
+            color: var(--text-secondary);
+            cursor: pointer;
+            user-select: none;
+        }
+
+        .toggle-label input[type="checkbox"] {
+            accent-color: var(--accent);
+            cursor: pointer;
+            width: 15px;
+            height: 15px;
+        }
+
+        .btn-action {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            padding: 9px 20px;
+            border-radius: 8px;
+            font-size: 13px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+            border: none;
+            background: linear-gradient(135deg, #0284c7 0%, #0ea5e9 100%);
+            color: #ffffff;
+            box-shadow: 0 0 16px rgba(14, 165, 233, 0.35);
+        }
+
+        .btn-action:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 4px 20px rgba(14, 165, 233, 0.5);
+            opacity: 0.95;
+        }
+
+        .btn-action.disconnect {
+            background: linear-gradient(135deg, #b91c1c 0%, #ef4444 100%);
+            box-shadow: 0 0 16px rgba(239, 68, 68, 0.35);
+        }
+
+        .btn-action.disconnect:hover {
+            box-shadow: 0 4px 20px rgba(239, 68, 68, 0.5);
+        }
+
+        /* Main Grid Layout */
+        .dashboard-grid {
+            display: grid;
+            grid-template-columns: minmax(0, 1.45fr) minmax(360px, 1fr);
+            gap: 24px;
+            align-items: start;
+        }
+
+        @media (max-width: 1100px) {
+            .dashboard-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        /* Video Container Section */
+        .video-card {
+            background: var(--bg-card);
+            border: 1px solid var(--border-subtle);
+            border-radius: 12px;
+            overflow: hidden;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
+            display: flex;
+            flex-direction: column;
+        }
+
+        .video-card-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 12px 18px;
+            background: rgba(15, 23, 42, 0.6);
+            border-bottom: 1px solid var(--border-subtle);
+        }
+
+        .status-pill {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            padding: 4px 10px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: 600;
+            font-family: 'JetBrains Mono', monospace;
+            background: rgba(239, 68, 68, 0.15);
+            color: var(--danger);
+            border: 1px solid rgba(239, 68, 68, 0.3);
+        }
+
+        .status-pill.active {
+            background: rgba(16, 185, 129, 0.15);
+            color: var(--success);
+            border: 1px solid rgba(16, 185, 129, 0.3);
+        }
+
+        .pulse-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background-color: currentColor;
+            box-shadow: 0 0 8px currentColor;
+            animation: pulse 1.6s infinite ease-in-out;
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; transform: scale(1); }
+            50% { opacity: 0.4; transform: scale(0.85); }
+        }
+
+        /* Live Video Frame Container with HUD Overlay */
+        .video-viewport {
+            position: relative;
+            width: 100%;
+            min-height: 480px;
+            background: #020617;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            overflow: hidden;
+        }
+
+        .video-feed-img {
+            width: 100%;
+            height: auto;
+            max-height: 600px;
+            object-fit: contain;
+            display: none;
+        }
+
+        /* Cyber Standby Placeholder */
+        .video-standby {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            gap: 16px;
+            padding: 60px 20px;
+            color: var(--text-muted);
+            text-align: center;
+        }
+
+        .radar-spinner {
+            width: 64px;
+            height: 64px;
+            border-radius: 50%;
+            border: 2px dashed rgba(56, 189, 248, 0.3);
+            border-top: 2px solid var(--accent);
+            animation: spin 3s linear infinite;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        .standby-title {
+            font-size: 15px;
+            font-weight: 600;
+            color: var(--text-secondary);
+        }
+
+        .standby-desc {
+            font-size: 13px;
+            max-width: 320px;
+            line-height: 1.5;
+        }
+
+        /* Live HUD Overlay (Absolute on top of video) */
+        .video-hud-overlay {
+            position: absolute;
+            inset: 0;
+            pointer-events: none;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            padding: 16px;
+            z-index: 10;
+        }
+
+        .hud-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            width: 100%;
+        }
+
+        .hud-chip {
+            pointer-events: auto;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            padding: 6px 12px;
+            background: rgba(15, 23, 42, 0.75);
+            backdrop-filter: blur(8px);
+            border: 1px solid rgba(255, 255, 255, 0.12);
+            border-radius: 8px;
+            font-size: 12px;
+            font-family: 'JetBrains Mono', monospace;
+            color: var(--text-primary);
+            box-shadow: 0 4px 16px rgba(0, 0, 0, 0.35);
+        }
+
+        .hud-chip.fps {
+            border-color: rgba(0, 255, 0, 0.3);
+            color: #4ade80;
+        }
+
+        .hud-chip.detections {
+            border-color: rgba(56, 189, 248, 0.3);
+            color: var(--accent);
+        }
+
+        .active-classes-container {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 6px;
+            max-width: 75%;
+        }
+
+        .class-pill {
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+            padding: 3px 8px;
+            background: rgba(0, 255, 0, 0.12);
+            border: 1px solid rgba(0, 255, 0, 0.35);
+            color: #4ade80;
+            border-radius: 6px;
+            font-size: 11px;
+            font-weight: 600;
+            font-family: 'JetBrains Mono', monospace;
+        }
+
+        /* Quick Stats Toolbar under Video */
+        .video-metrics-bar {
+            display: flex;
+            justify-content: space-around;
+            align-items: center;
+            padding: 12px 16px;
+            background: rgba(15, 23, 42, 0.4);
+            border-top: 1px solid var(--border-subtle);
+            font-size: 13px;
+        }
+
+        .metric-item {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 2px;
+        }
+
+        .metric-label {
+            font-size: 11px;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            font-family: 'JetBrains Mono', monospace;
+        }
+
+        .metric-val {
+            font-weight: 700;
+            font-size: 15px;
+            font-family: 'JetBrains Mono', monospace;
+        }
+
+        /* Right Column Cards */
+        .side-column {
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+        }
+
+        .panel-card {
+            background: var(--bg-card);
+            border: 1px solid var(--border-subtle);
+            border-radius: 12px;
+            padding: 18px;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+        }
+
+        .panel-title {
+            font-size: 15px;
+            font-weight: 600;
+            color: var(--text-primary);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 14px;
+            padding-bottom: 10px;
+            border-bottom: 1px solid var(--border-subtle);
+        }
+
+        .panel-title span.sub {
+            font-size: 11px;
+            font-family: 'JetBrains Mono', monospace;
+            color: var(--text-muted);
+            font-weight: normal;
+        }
+
+        /* Occurrences Grid */
+        .occurrences-grid {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            min-height: 48px;
+            align-items: center;
+        }
+
+        .occurrence-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            padding: 6px 12px;
+            background: rgba(15, 23, 42, 0.8);
+            border: 1px solid var(--border-subtle);
+            border-radius: 8px;
+            font-size: 13px;
+            font-family: 'JetBrains Mono', monospace;
+            color: var(--text-primary);
+        }
+
+        .occurrence-badge .badge-count {
+            background: var(--accent);
+            color: #090d16;
+            font-weight: 700;
+            padding: 1px 7px;
+            border-radius: 10px;
+            font-size: 11px;
+        }
+
+        /* Alerts Stream */
+        .alerts-stream {
+            max-height: 490px;
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+            padding-right: 4px;
+        }
+
+        .alerts-stream::-webkit-scrollbar {
+            width: 6px;
+        }
+        .alerts-stream::-webkit-scrollbar-track {
+            background: transparent;
+        }
+        .alerts-stream::-webkit-scrollbar-thumb {
+            background: var(--border-subtle);
+            border-radius: 3px;
+        }
+
+        .alert-card {
+            background: rgba(15, 23, 42, 0.85);
+            border-left: 4px solid var(--accent);
+            border-top: 1px solid var(--border-subtle);
+            border-right: 1px solid var(--border-subtle);
+            border-bottom: 1px solid var(--border-subtle);
+            border-radius: 8px;
+            padding: 14px;
+            box-shadow: 0 4px 16px rgba(0, 0, 0, 0.25);
+            animation: fadeIn 0.3s ease-out;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(-4px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .alert-card.critical {
+            border-left-color: var(--danger);
+            background: linear-gradient(135deg, rgba(239, 68, 68, 0.08) 0%, rgba(15, 23, 42, 0.85) 100%);
+        }
+
+        .alert-card.periodic {
+            border-left-color: var(--warning);
+            background: linear-gradient(135deg, rgba(245, 158, 11, 0.08) 0%, rgba(15, 23, 42, 0.85) 100%);
+        }
+
+        .alert-top {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-size: 11px;
+            font-family: 'JetBrains Mono', monospace;
+            margin-bottom: 8px;
+        }
+
+        .alert-badge {
+            font-weight: 700;
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-size: 11px;
+            letter-spacing: 0.04em;
+        }
+
+        .alert-badge.crit {
+            background: rgba(239, 68, 68, 0.2);
+            color: #f87171;
+            border: 1px solid rgba(239, 68, 68, 0.4);
+        }
+
+        .alert-badge.peri {
+            background: rgba(245, 158, 11, 0.2);
+            color: #fbbf24;
+            border: 1px solid rgba(245, 158, 11, 0.4);
+        }
+
+        .alert-summary {
+            font-size: 13.5px;
+            font-weight: 600;
+            color: var(--text-primary);
+            line-height: 1.4;
+            margin-bottom: 8px;
+        }
+
+        .alert-trigger {
+            font-size: 12px;
+            font-family: 'JetBrains Mono', monospace;
+            color: var(--accent);
+            margin-bottom: 8px;
+        }
+
+        .finding-item {
+            font-size: 12.5px;
+            color: var(--text-secondary);
+            padding: 8px 0;
+            border-top: 1px dashed var(--border-subtle);
+            line-height: 1.4;
+        }
+
+        .sev-pill {
+            font-size: 10px;
+            font-weight: 700;
+            padding: 1px 6px;
+            border-radius: 4px;
+            font-family: 'JetBrains Mono', monospace;
+        }
+
+        .sev-HIGH { background: rgba(239, 68, 68, 0.25); color: #f87171; }
+        .sev-MEDIUM { background: rgba(245, 158, 11, 0.25); color: #fbbf24; }
+        .sev-LOW { background: rgba(16, 185, 129, 0.25); color: #34d399; }
+    </style>
+</head>
+<body>
+
+    <!-- Header Navigation & Stream Controls -->
+    <header class="header">
+        <div class="brand">
+            <div class="brand-icon">VA</div>
+            <div>
+                <div class="brand-title">VisionAudit AI Console</div>
+                <div class="brand-subtitle">Real-Time Object Detection & Facility Safety Auditing</div>
+            </div>
+        </div>
+
+        <div class="controls">
+            <div class="input-group">
+                <label for="wsUrl">WS URL</label>
+                <input type="text" id="wsUrl" value="ws://localhost:8000/ws/live-audit?source=0&preview=true" style="width: 320px;" title="WebSocket connection URL with query parameters" />
+            </div>
+
+            <div class="input-group">
+                <label for="sourceInput">SOURCE</label>
+                <input type="text" id="sourceInput" value="0" style="width: 80px;" placeholder="0 or RTSP" title="Webcam index (0) or stream URL" onchange="syncUrlParams()" />
+            </div>
+
+            <label class="toggle-label" title="Request real-time green bounding boxes and detection tags">
+                <input type="checkbox" id="previewCheckbox" checked onchange="syncUrlParams()">
+                <span>Visual Feed (Boxes)</span>
+            </label>
+
+            <button id="connectBtn" class="btn-action" onclick="toggleConnect()">
+                <span>Connect Stream</span>
+            </button>
+        </div>
+    </header>
+
+    <!-- Main Workspace Grid -->
+    <main class="dashboard-grid">
+
+        <!-- Column 1: Live Video Feed & Overlaid HUD -->
+        <section class="video-card">
+            <div class="video-card-header">
+                <div style="display:flex; align-items:center; gap:10px;">
+                    <span style="font-size: 14px; font-weight: 600;">Active Surveillance Monitor</span>
+                    <span id="camSourceBadge" style="font-size: 11px; font-family:'JetBrains Mono', monospace; color:var(--text-muted); background:var(--bg-surface); padding:2px 8px; border-radius:4px;">SRC: 0</span>
+                </div>
+                <div id="connStatusPill" class="status-pill">
+                    <span class="pulse-dot"></span>
+                    <span id="connStatusText">DISCONNECTED</span>
+                </div>
+            </div>
+
+            <div class="video-viewport" id="videoViewport">
+                <!-- Fallback Standby State -->
+                <div id="feedPlaceholder" class="video-standby">
+                    <div class="radar-spinner"></div>
+                    <div class="standby-title">CAMERA STANDBY</div>
+                    <div class="standby-desc">Connect to the live WebSocket stream above to begin streaming high-visibility green bounding boxes and class telemetry.</div>
+                </div>
+
+                <!-- Live Stream Image Element -->
+                <img id="liveFeedImg" class="video-feed-img" alt="VisionAudit Real-Time Stream" />
+
+                <!-- Overlaid Live HUD Display -->
+                <div class="video-hud-overlay" id="hudOverlay" style="display: none;">
+                    <!-- Top HUD Row -->
+                    <div class="hud-row">
+                        <div class="hud-chip" style="background: rgba(0,0,0,0.65);">
+                            <span class="pulse-dot" style="color: #ef4444;"></span>
+                            <span style="font-weight: 700; color: #ef4444;">LIVE FEED</span>
+                            <span style="color: var(--text-muted);">|</span>
+                            <span id="overlayResolution" style="color: var(--text-secondary);">YOLOv8</span>
+                        </div>
+                        <div class="hud-chip fps">
+                            <span>⚡</span>
+                            <span id="overlayFps" style="font-weight: 700;">0.0</span>
+                            <span>FPS</span>
+                        </div>
+                    </div>
+
+                    <!-- Bottom HUD Row -->
+                    <div class="hud-row" style="align-items: flex-end;">
+                        <div>
+                            <div class="hud-chip detections" style="margin-bottom: 8px;">
+                                <span>🎯</span>
+                                <span id="overlayCount" style="font-weight: 700;">0</span>
+                                <span>Detections</span>
+                            </div>
+                            <div id="overlayClasses" class="active-classes-container"></div>
+                        </div>
+
+                        <div class="hud-chip" style="font-size: 11px; color: var(--text-muted);">
+                            <span id="overlayClock">--:--:--</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Quick Metrics Footer Bar -->
+            <div class="video-metrics-bar">
+                <div class="metric-item">
+                    <span class="metric-label">Inference FPS</span>
+                    <span id="barFps" class="metric-val" style="color: #4ade80;">0.0</span>
+                </div>
+                <div class="metric-item">
+                    <span class="metric-label">Objects in Frame</span>
+                    <span id="barTotalObjects" class="metric-val" style="color: var(--accent);">0</span>
+                </div>
+                <div class="metric-item">
+                    <span class="metric-label">Total Messages</span>
+                    <span id="barMsgCount" class="metric-val">0</span>
+                </div>
+                <div class="metric-item">
+                    <span class="metric-label">Audit Engine</span>
+                    <span class="metric-val" style="color: var(--text-secondary); font-size: 13px;">Gemini 1.5-Flash</span>
+                </div>
+            </div>
+        </section>
+
+        <!-- Column 2: Object Breakdown & Throttled LLM Audits -->
+        <section class="side-column">
+
+            <!-- Detection Breakdown Panel -->
+            <div class="panel-card">
+                <div class="panel-title">
+                    <span>Active Object Occurrences</span>
+                    <span class="sub" id="occurrencesSubtitle">0 unique classes</span>
+                </div>
+                <div id="occurrencesList" class="occurrences-grid">
+                    <span style="color: var(--text-muted); font-size: 13px;">No objects detected in current frame.</span>
+                </div>
+            </div>
+
+            <!-- Throttled LangChain LLM Policy & Safety Audits -->
+            <div class="panel-card" style="flex: 1;">
+                <div class="panel-title">
+                    <span>Throttled LangChain LLM Audits</span>
+                    <span class="sub">Critical & Periodic Summaries</span>
+                </div>
+                <div id="alertsStream" class="alerts-stream">
+                    <div style="color: var(--text-muted); font-size: 13px; text-align: center; padding: 48px 16px; line-height: 1.6;">
+                        Awaiting audit triggers...<br>
+                        Audits dispatch automatically when critical entities (person, fire, knife, etc.) appear or on periodic 15s intervals.
+                    </div>
+                </div>
+            </div>
+
+        </section>
+
+    </main>
+
+    <script>
+        let ws = null;
+        let isConnected = false;
+        let messageCounter = 0;
+
+        function syncUrlParams() {
+            const baseUrlInput = document.getElementById("wsUrl");
+            const source = document.getElementById("sourceInput").value.trim() || "0";
+            const preview = document.getElementById("previewCheckbox").checked;
+
+            try {
+                let currentVal = baseUrlInput.value.trim();
+                let base = currentVal.split("?")[0];
+                baseUrlInput.value = `${base}?source=${encodeURIComponent(source)}&preview=${preview}`;
+                document.getElementById("camSourceBadge").innerText = `SRC: ${source}`;
+            } catch (e) {
+                console.error("URL sync error:", e);
+            }
+        }
+
+        function toggleConnect() {
+            if (isConnected) {
+                if (ws) {
+                    ws.close();
+                }
+                return;
+            }
+
+            let fullUrl = document.getElementById("wsUrl").value.trim();
+            // Ensure preview=true is default if omitted
+            if (!fullUrl.includes("preview=")) {
+                const preview = document.getElementById("previewCheckbox").checked;
+                fullUrl += (fullUrl.includes("?") ? "&" : "?") + `preview=${preview}`;
+            }
+
+            try {
+                ws = new WebSocket(fullUrl);
+            } catch (err) {
+                alert("Failed to initialize WebSocket: " + err.message);
+                return;
+            }
+
+            const statusPill = document.getElementById("connStatusPill");
+            const statusText = document.getElementById("connStatusText");
+            const connectBtn = document.getElementById("connectBtn");
+
+            statusText.innerText = "CONNECTING...";
+            statusPill.classList.remove("active");
+
+            ws.onopen = () => {
+                isConnected = true;
+                statusText.innerText = "STREAMING LIVE";
+                statusPill.classList.add("active");
+                connectBtn.innerHTML = "<span>Disconnect</span>";
+                connectBtn.classList.add("disconnect");
+                document.getElementById("hudOverlay").style.display = "flex";
+            };
+
+            ws.onmessage = (event) => {
+                messageCounter++;
+                document.getElementById("barMsgCount").innerText = messageCounter;
+                try {
+                    const data = JSON.parse(event.data);
+                    handleEvent(data);
+                } catch (err) {
+                    console.error("Failed to parse WebSocket JSON payload:", err);
+                }
+            };
+
+            ws.onclose = () => {
+                isConnected = false;
+                statusText.innerText = "DISCONNECTED";
+                statusPill.classList.remove("active");
+                connectBtn.innerHTML = "<span>Connect Stream</span>";
+                connectBtn.classList.remove("disconnect");
+                document.getElementById("hudOverlay").style.display = "none";
+                document.getElementById("liveFeedImg").style.display = "none";
+                document.getElementById("feedPlaceholder").style.display = "flex";
+                document.getElementById("overlayFps").innerText = "0.0";
+                document.getElementById("barFps").innerText = "0.0";
+            };
+
+            ws.onerror = (err) => {
+                console.error("WebSocket stream error:", err);
+            };
+        }
+
+        function handleEvent(data) {
+            // Update timestamp clock
+            document.getElementById("overlayClock").innerText = new Date().toLocaleTimeString();
+
+            if (data.event === "telemetry") {
+                const fps = typeof data.fps === "number" ? data.fps : 0.0;
+                const formattedFps = fps.toFixed(1);
+                document.getElementById("overlayFps").innerText = formattedFps;
+                document.getElementById("barFps").innerText = formattedFps;
+
+                const telemetry = data.telemetry || {};
+                const totalCount = telemetry.total_count || 0;
+                document.getElementById("overlayCount").innerText = totalCount;
+                document.getElementById("barTotalObjects").innerText = totalCount;
+
+                // 1. Render incoming base64 annotated preview frame with green bounding boxes
+                const base64Frame = data.preview || telemetry.annotated_image_base64;
+                if (base64Frame) {
+                    const imgEl = document.getElementById("liveFeedImg");
+                    const placeholder = document.getElementById("feedPlaceholder");
+                    imgEl.src = "data:image/jpeg;base64," + base64Frame;
+                    imgEl.style.display = "block";
+                    placeholder.style.display = "none";
+                }
+
+                // 2. Render active classes inside HUD overlay
+                const classCounts = telemetry.class_counts || {};
+                const overlayClasses = document.getElementById("overlayClasses");
+                overlayClasses.innerHTML = "";
+
+                const occurrencesList = document.getElementById("occurrencesList");
+                occurrencesList.innerHTML = "";
+
+                const entries = Object.entries(classCounts);
+                document.getElementById("occurrencesSubtitle").innerText = `${entries.length} unique classes`;
+
+                if (entries.length === 0) {
+                    occurrencesList.innerHTML = `<span style="color: var(--text-muted); font-size: 13px;">No objects detected in current frame.</span>`;
+                } else {
+                    for (const [cls, count] of entries) {
+                        // In HUD
+                        const hudPill = document.createElement("span");
+                        hudPill.className = "class-pill";
+                        hudPill.innerText = `${cls}: ${count}`;
+                        overlayClasses.appendChild(hudPill);
+
+                        // In Right Sidebar Occurrences Panel
+                        const badge = document.createElement("div");
+                        badge.className = "occurrence-badge";
+                        badge.innerHTML = `<span>${cls}</span><span class="badge-count">${count}</span>`;
+                        occurrencesList.appendChild(badge);
+                    }
+                }
+
+            } else if (data.event === "critical_alert" || data.event === "periodic_audit") {
+                renderAuditReport(data);
+            }
+        }
+
+        function renderAuditReport(data) {
+            const container = document.getElementById("alertsStream");
+            if (container.children.length === 1 && container.children[0].innerText.includes("Awaiting audit")) {
+                container.innerHTML = "";
+            }
+
+            const isCrit = data.event === "critical_alert";
+            const report = data.report || {};
+            const card = document.createElement("div");
+            card.className = `alert-card ${isCrit ? "critical" : "periodic"}`;
+
+            const findingsHtml = (report.findings || []).map(f => {
+                const sev = f.severity || "LOW";
+                return `
+                    <div class="finding-item">
+                        <div style="display:flex; justify-content:space-between; margin-bottom: 2px;">
+                            <strong style="color:var(--text-primary);">[${f.category || 'General'}]</strong>
+                            <span class="sev-pill sev-${sev}">${sev}</span>
+                        </div>
+                        <div>${f.observation}</div>
+                        <div style="margin-top: 4px; color: var(--accent);"><strong style="color:var(--text-secondary);">Action:</strong> ${f.recommended_action}</div>
+                    </div>
+                `;
+            }).join("");
+
+            card.innerHTML = `
+                <div class="alert-top">
+                    <span class="alert-badge ${isCrit ? 'crit' : 'peri'}">
+                        ${isCrit ? '🚨 CRITICAL SAFETY ALERT' : '⏱ PERIODIC FACILITY AUDIT'}
+                    </span>
+                    <span style="color: var(--text-muted);">${new Date(data.timestamp || Date.now()).toLocaleTimeString()}</span>
+                </div>
+                <div class="alert-summary">${report.summary || 'Facility compliance summary generated.'}</div>
+                <div class="alert-trigger">⚡ Trigger: ${data.trigger_reason || 'Periodic Audit'}</div>
+                ${findingsHtml}
+            `;
+
+            container.prepend(card);
+        }
+    </script>
+</body>
+</html>
