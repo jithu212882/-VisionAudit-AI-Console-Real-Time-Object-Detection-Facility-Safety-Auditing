@@ -39,7 +39,7 @@ class Settings(BaseSettings):
         description="Minimum seconds to wait between critical event LLM triggers"
     )
     critical_object_classes: list[str] = Field(
-        default=["person", "fire", "knife", "scissors"],
+        default=["fire", "knife", "scissors"],
         description="Object classes that immediately trigger safety/security audit checks"
     )
 
