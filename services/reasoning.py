@@ -111,10 +111,9 @@ class ReasoningService:
 
         # Preferred model and resilient fallback candidates
         candidate_models = [self.model_name]
-        if self.model_name != "gemini-3.5-flash":
-            candidate_models.append("gemini-3.5-flash")
-        if self.model_name != "gemini-flash-latest":
-            candidate_models.append("gemini-flash-latest")
+        for fallback in ["gemini-2.0-flash", "gemini-1.5-flash-latest", "gemini-2.5-flash", "gemini-flash-latest", "gemini-1.5-pro"]:
+            if fallback not in candidate_models:
+                candidate_models.append(fallback)
 
         last_error = None
         for model in candidate_models:
