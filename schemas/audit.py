@@ -89,12 +89,24 @@ class BoundingBox(BaseModel):
         ..., 
         description="Normalized or pixel bounding box coordinates [x1, y1, x2, y2]"
     )
+    is_intrusion: bool = Field(
+        default=False,
+        description="True if detected entity has intruded into a restricted zone"
+    )
 
 
 class VisionTelemetry(BaseModel):
     total_count: int
     class_counts: Dict[str, int]
     detections: List[BoundingBox]
+    intrusion_detected: bool = Field(
+        default=False,
+        description="Flag indicating whether a restricted hazard zone intrusion was detected in the frame"
+    )
+    restricted_zone: Optional[List[List[float]]] = Field(
+        default=None,
+        description="Active polygon coordinates for restricted hazard zone ROI"
+    )
     annotated_image_base64: Optional[str] = Field(
         default=None, 
         description="Base64 encoded JPEG representation of the annotated frame"

@@ -577,6 +577,141 @@
         .sev-HIGH { background: rgba(239, 68, 68, 0.25); color: #f87171; }
         .sev-MEDIUM { background: rgba(245, 158, 11, 0.25); color: #fbbf24; }
         .sev-LOW { background: rgba(16, 185, 129, 0.25); color: #34d399; }
+
+        /* Flashing Hazard & Intrusion Alert Banner */
+        .safety-alert-banner {
+            margin-bottom: 24px;
+            border-radius: 12px;
+            padding: 14px 20px;
+            background: linear-gradient(90deg, #991b1b 0%, #dc2626 50%, #991b1b 100%);
+            border: 2px solid #ef4444;
+            box-shadow: 0 0 26px rgba(239, 68, 68, 0.65);
+            animation: alertBannerPulse 1.2s infinite ease-in-out;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            position: relative;
+            overflow: hidden;
+        }
+
+        @keyframes alertBannerPulse {
+            0%, 100% {
+                background: linear-gradient(90deg, #7f1d1d 0%, #dc2626 50%, #7f1d1d 100%);
+                border-color: #ef4444;
+                box-shadow: 0 0 24px rgba(239, 68, 68, 0.55);
+                transform: scale(1);
+            }
+            50% {
+                background: linear-gradient(90deg, #b91c1c 0%, #ef4444 50%, #b91c1c 100%);
+                border-color: #fca5a5;
+                box-shadow: 0 0 42px rgba(239, 68, 68, 0.95);
+                transform: scale(1.008);
+            }
+        }
+
+        .alert-banner-content {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 16px;
+            flex-wrap: wrap;
+        }
+
+        .alert-banner-icon-box {
+            font-size: 28px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            animation: sirenWiggle 0.6s infinite alternate ease-in-out;
+        }
+
+        @keyframes sirenWiggle {
+            0% { transform: rotate(-10deg) scale(1); }
+            100% { transform: rotate(10deg) scale(1.2); }
+        }
+
+        .alert-banner-text {
+            flex: 1;
+            min-width: 260px;
+        }
+
+        .alert-banner-title {
+            font-size: 16px;
+            font-weight: 800;
+            color: #ffffff;
+            letter-spacing: -0.01em;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            text-transform: uppercase;
+        }
+
+        .alert-banner-desc {
+            font-size: 13px;
+            color: #fee2e2;
+            margin-top: 3px;
+            line-height: 1.4;
+        }
+
+        .alert-banner-meta {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .alert-banner-badge {
+            background: rgba(0, 0, 0, 0.45);
+            border: 1px solid rgba(255, 255, 255, 0.35);
+            border-radius: 6px;
+            padding: 4px 10px;
+            font-size: 11px;
+            font-weight: 700;
+            font-family: 'JetBrains Mono', monospace;
+            color: #ffffff;
+            letter-spacing: 0.05em;
+        }
+
+        .alert-banner-time {
+            font-size: 12px;
+            font-family: 'JetBrains Mono', monospace;
+            color: #fecaca;
+        }
+
+        .alert-banner-dismiss {
+            background: rgba(255, 255, 255, 0.18);
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            color: #ffffff;
+            font-size: 13px;
+            cursor: pointer;
+            width: 28px;
+            height: 28px;
+            border-radius: 6px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.15s ease;
+        }
+
+        .alert-banner-dismiss:hover {
+            background: rgba(255, 255, 255, 0.35);
+            transform: scale(1.1);
+        }
+
+        /* Canvas Overlay for Restricted Zone Polygon */
+        .zone-canvas-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            pointer-events: none;
+            z-index: 5;
+            display: none;
+        }
+
+        .hud-chip.intrusion-chip {
+            background: rgba(220, 38, 38, 0.95);
+            border-color: #f87171;
+            color: #ffffff;
+            box-shadow: 0 0 16px rgba(239, 68, 68, 0.8);
+            animation: pulse 1s infinite ease-in-out;
+        }
     </style>
 </head>
 <body>
@@ -613,6 +748,24 @@
         </div>
     </header>
 
+    <!-- Flashing Safety Violation & Restricted Zone Alert Banner -->
+    <div id="safetyAlertBanner" class="safety-alert-banner" style="display: none;">
+        <div class="alert-banner-content">
+            <div class="alert-banner-icon-box">
+                <span class="alert-banner-siren">🚨</span>
+            </div>
+            <div class="alert-banner-text">
+                <div class="alert-banner-title" id="alertBannerTitle">RESTRICTED ZONE INTRUSION DETECTED!</div>
+                <div class="alert-banner-desc" id="alertBannerDesc">Hazardous machinery zone breached by detected person! Immediate evacuation required.</div>
+            </div>
+            <div class="alert-banner-meta">
+                <span class="alert-banner-badge" id="alertBannerBadge">CRITICAL INTRUSION</span>
+                <span class="alert-banner-time" id="alertBannerTime">--:--:--</span>
+                <button class="alert-banner-dismiss" onclick="dismissAlertBanner()" title="Dismiss Banner">✕</button>
+            </div>
+        </div>
+    </div>
+
     <!-- Main Workspace Grid -->
     <main class="dashboard-grid">
 
@@ -640,15 +793,24 @@
                 <!-- Live Stream Image Element -->
                 <img id="liveFeedImg" class="video-feed-img" alt="VisionAudit Real-Time Stream" />
 
+                <!-- Canvas Overlay for Restricted Zone Polygon -->
+                <canvas id="zoneOverlayCanvas" class="zone-canvas-overlay"></canvas>
+
                 <!-- Overlaid Live HUD Display -->
                 <div class="video-hud-overlay" id="hudOverlay" style="display: none;">
                     <!-- Top HUD Row -->
                     <div class="hud-row">
-                        <div class="hud-chip" style="background: rgba(0,0,0,0.65);">
-                            <span class="pulse-dot" style="color: #ef4444;"></span>
-                            <span style="font-weight: 700; color: #ef4444;">LIVE FEED</span>
-                            <span style="color: var(--text-muted);">|</span>
-                            <span id="overlayResolution" style="color: var(--text-secondary);">YOLOv8</span>
+                        <div style="display: flex; align-items: center; gap: 8px;">
+                            <div class="hud-chip" style="background: rgba(0,0,0,0.65);">
+                                <span class="pulse-dot" style="color: #ef4444;"></span>
+                                <span style="font-weight: 700; color: #ef4444;">LIVE FEED</span>
+                                <span style="color: var(--text-muted);">|</span>
+                                <span id="overlayResolution" style="color: var(--text-secondary);">YOLOv8</span>
+                            </div>
+                            <div id="hudIntrusionChip" class="hud-chip intrusion-chip" style="display: none;">
+                                <span class="pulse-dot" style="color: #ffffff;"></span>
+                                <span style="font-weight: 800; color: #ffffff;">ZONE BREACH</span>
+                            </div>
                         </div>
                         <div class="hud-chip fps">
                             <span>⚡</span>
@@ -805,14 +967,141 @@
                 connectBtn.classList.remove("disconnect");
                 document.getElementById("hudOverlay").style.display = "none";
                 document.getElementById("liveFeedImg").style.display = "none";
+                document.getElementById("zoneOverlayCanvas").style.display = "none";
+                document.getElementById("hudIntrusionChip").style.display = "none";
                 document.getElementById("feedPlaceholder").style.display = "flex";
                 document.getElementById("overlayFps").innerText = "0.0";
                 document.getElementById("barFps").innerText = "0.0";
+                dismissAlertBanner();
             };
 
             ws.onerror = (err) => {
                 console.error("WebSocket stream error:", err);
             };
+        }
+
+        let activeIntrusionTimeout = null;
+        let lastTelemetry = null;
+
+        function renderZoneOverlay(telemetry) {
+            lastTelemetry = telemetry;
+            const canvas = document.getElementById("zoneOverlayCanvas");
+            const img = document.getElementById("liveFeedImg");
+            if (!canvas || !img || img.style.display === "none") {
+                if (canvas) canvas.style.display = "none";
+                return;
+            }
+
+            const imgRect = img.getBoundingClientRect();
+            const parentRect = img.parentElement.getBoundingClientRect();
+            const leftOffset = imgRect.left - parentRect.left;
+            const topOffset = imgRect.top - parentRect.top;
+            const width = imgRect.width;
+            const height = imgRect.height;
+
+            if (width < 10 || height < 10) return;
+
+            canvas.style.display = "block";
+            canvas.style.left = `${leftOffset}px`;
+            canvas.style.top = `${topOffset}px`;
+            canvas.style.width = `${width}px`;
+            canvas.style.height = `${height}px`;
+
+            canvas.width = width;
+            canvas.height = height;
+
+            const ctx = canvas.getContext("2d");
+            ctx.clearRect(0, 0, width, height);
+
+            // Normalized polygon [x, y] coordinates
+            const polygon = (telemetry && telemetry.restricted_zone) ? telemetry.restricted_zone : [[0.10, 0.35], [0.55, 0.35], [0.55, 0.95], [0.10, 0.95]];
+            if (!polygon || polygon.length < 3) return;
+
+            const points = polygon.map(p => ({
+                x: p[0] * width,
+                y: p[1] * height
+            }));
+
+            const isIntrusion = Boolean(telemetry && telemetry.intrusion_detected);
+
+            // 1. Draw Semi-Transparent Red Polygon ROI
+            ctx.save();
+            ctx.beginPath();
+            ctx.moveTo(points[0].x, points[0].y);
+            for (let i = 1; i < points.length; i++) {
+                ctx.lineTo(points[i].x, points[i].y);
+            }
+            ctx.closePath();
+
+            if (isIntrusion) {
+                ctx.fillStyle = "rgba(239, 68, 68, 0.38)";
+                ctx.strokeStyle = "#ff0033";
+                ctx.lineWidth = 3;
+                ctx.shadowColor = "#ef4444";
+                ctx.shadowBlur = 14;
+            } else {
+                ctx.fillStyle = "rgba(239, 68, 68, 0.22)";
+                ctx.strokeStyle = "rgba(239, 68, 68, 0.85)";
+                ctx.lineWidth = 2;
+                ctx.shadowBlur = 0;
+            }
+            ctx.fill();
+            ctx.stroke();
+
+            // 2. Zone Identification Tag Banner
+            const minX = Math.min(...points.map(p => p.x));
+            const minY = Math.min(...points.map(p => p.y));
+            const tagX = Math.max(minX + 8, 12);
+            const tagY = Math.max(minY + 20, 22);
+
+            ctx.fillStyle = isIntrusion ? "rgba(220, 38, 38, 0.95)" : "rgba(185, 28, 28, 0.85)";
+            if (ctx.roundRect) {
+                ctx.beginPath();
+                ctx.roundRect(tagX - 4, tagY - 14, isIntrusion ? 230 : 195, 20, 4);
+                ctx.fill();
+            } else {
+                ctx.fillRect(tagX - 4, tagY - 14, isIntrusion ? 230 : 195, 20);
+            }
+
+            ctx.fillStyle = "#ffffff";
+            ctx.font = "bold 11px 'JetBrains Mono', monospace";
+            ctx.fillText(isIntrusion ? "🚨 HAZARD INTRUSION DETECTED" : "⚠️ RESTRICTED HAZARD ZONE", tagX, tagY);
+
+            ctx.restore();
+        }
+
+        window.addEventListener("resize", () => {
+            if (lastTelemetry) renderZoneOverlay(lastTelemetry);
+        });
+
+        function showAlertBanner(title, desc, badge, isIntrusion) {
+            const banner = document.getElementById("safetyAlertBanner");
+            if (!banner) return;
+
+            document.getElementById("alertBannerTitle").innerText = title;
+            document.getElementById("alertBannerDesc").innerText = desc;
+            document.getElementById("alertBannerBadge").innerText = badge || "CRITICAL";
+            document.getElementById("alertBannerTime").innerText = new Date().toLocaleTimeString();
+
+            banner.style.display = "block";
+            banner.dataset.type = isIntrusion ? "intrusion" : "critical";
+
+            if (activeIntrusionTimeout) {
+                clearTimeout(activeIntrusionTimeout);
+                activeIntrusionTimeout = null;
+            }
+        }
+
+        function dismissAlertBanner() {
+            const banner = document.getElementById("safetyAlertBanner");
+            if (banner) {
+                banner.style.display = "none";
+                banner.dataset.type = "";
+            }
+            if (activeIntrusionTimeout) {
+                clearTimeout(activeIntrusionTimeout);
+                activeIntrusionTimeout = null;
+            }
         }
 
         function handleEvent(data) {
@@ -830,7 +1119,7 @@
                 document.getElementById("overlayCount").innerText = totalCount;
                 document.getElementById("barTotalObjects").innerText = totalCount;
 
-                // 1. Render incoming base64 annotated preview frame with green bounding boxes
+                // 1. Render incoming base64 annotated preview frame
                 const base64Frame = data.preview || telemetry.annotated_image_base64;
                 if (base64Frame) {
                     const imgEl = document.getElementById("liveFeedImg");
@@ -838,6 +1127,32 @@
                     imgEl.src = "data:image/jpeg;base64," + base64Frame;
                     imgEl.style.display = "block";
                     placeholder.style.display = "none";
+                    imgEl.onload = () => renderZoneOverlay(telemetry);
+                }
+
+                // Render semi-transparent restricted polygon zone overlay
+                renderZoneOverlay(telemetry);
+
+                // Restricted Zone Intrusion Handling
+                const hudIntrusion = document.getElementById("hudIntrusionChip");
+                if (telemetry.intrusion_detected) {
+                    hudIntrusion.style.display = "inline-flex";
+                    showAlertBanner(
+                        "🚨 RESTRICTED ZONE INTRUSION DETECTED!",
+                        "Hazardous machinery zone breached by detected person! Immediate evacuation & machinery halt required.",
+                        "CRITICAL INTRUSION",
+                        true
+                    );
+                } else {
+                    hudIntrusion.style.display = "none";
+                    const banner = document.getElementById("safetyAlertBanner");
+                    if (banner && banner.style.display !== "none" && banner.dataset.type === "intrusion" && !activeIntrusionTimeout) {
+                        activeIntrusionTimeout = setTimeout(() => {
+                            if (!lastTelemetry || !lastTelemetry.intrusion_detected) {
+                                dismissAlertBanner();
+                            }
+                        }, 4000);
+                    }
                 }
 
                 // 2. Render active classes inside HUD overlay
@@ -870,6 +1185,15 @@
                 }
 
             } else if (data.event === "critical_alert" || data.event === "periodic_audit") {
+                const isCrit = data.event === "critical_alert";
+                if (isCrit) {
+                    showAlertBanner(
+                        "🚨 CRITICAL SAFETY AUDIT ALERT",
+                        data.trigger_reason || "Immediate hazardous safety condition identified by AI auditor.",
+                        "CRITICAL ALERT",
+                        false
+                    );
+                }
                 renderAuditReport(data);
             }
         }

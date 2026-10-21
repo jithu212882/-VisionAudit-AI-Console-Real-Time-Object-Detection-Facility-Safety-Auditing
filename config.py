@@ -42,6 +42,16 @@ class Settings(BaseSettings):
         default=["person", "fire", "knife", "scissors"],
         description="Object classes that immediately trigger safety/security audit checks"
     )
+
+    # Restricted Hazard Zone & Alert Webhook Settings
+    restricted_zone_polygon: list[list[float]] = Field(
+        default=[[0.10, 0.35], [0.55, 0.35], [0.55, 0.95], [0.10, 0.95]],
+        description="Normalized [x, y] coordinates (0.0 to 1.0) defining the restricted hazard zone polygon ROI"
+    )
+    alert_webhook_url: str = Field(
+        default="",
+        description="Optional webhook endpoint URL for dispatching safety intrusion notifications"
+    )
     
     model_config = SettingsConfigDict(
         env_file=str(ENV_PATH) if ENV_PATH.exists() else ".env",

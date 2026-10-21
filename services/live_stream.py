@@ -44,6 +44,7 @@ class LiveStreamAuditor:
         self.last_critical_audit_time = 0.0
         self.active_audit_task: Optional[asyncio.Task] = None
         self.prev_critical_counts: dict[str, int] = {}
+        self.prev_intrusion_detected = False
         
         # Exponential backoff governor
         self.consecutive_failures = 0
@@ -55,6 +56,45 @@ class LiveStreamAuditor:
         if stripped.isdigit():
             return int(stripped)
         return stripped
+
+    async def _dispatch_webhook_alert(
+        self,
+        timestamp: str,
+        alert_type: str,
+        telemetry: VisionTelemetry,
+        reason: str
+    ):
+        """Dispatches an instant notification/webhook alert for critical safety violations or intrusions."""
+        payload = {
+            "timestamp": timestamp,
+            "alert_type": alert_type,
+            "event": "ZONE_INTRUSION_ALERT" if getattr(telemetry, "intrusion_detected", False) else "CRITICAL_SAFETY_VIOLATION",
+            "trigger_reason": reason,
+            "severity": "CRITICAL",
+            "telemetry": {
+                "total_count": telemetry.total_count,
+                "class_counts": telemetry.class_counts,
+                "intrusion_detected": getattr(telemetry, "intrusion_detected", False),
+                "intruder_boxes": [
+                    det.box for det in telemetry.detections if getattr(det, "is_intrusion", False)
+                ]
+            }
+        }
+
+        target_url = settings.alert_webhook_url
+        if target_url:
+            try:
+                import httpx
+                async with httpx.AsyncClient(timeout=3.0) as client:
+                    resp = await client.post(target_url, json=payload)
+                    logger.info(f"Instant webhook alert dispatched to {target_url} - Status: {resp.status_code}")
+            except Exception as e:
+                logger.error(f"Failed to post alert to webhook {target_url}: {e}")
+        else:
+            logger.warning(
+                f"🚨 [INSTANT NOTIFICATION DISPATCH] Simulated Webhook Alert ({payload['event']}) at {timestamp}: "
+                f"{reason} | Telemetry: {payload['telemetry']}"
+            )
 
     async def _dispatch_llm_audit(
         self,
@@ -124,7 +164,15 @@ class LiveStreamAuditor:
             self.active_audit_task = None
 
     def _should_trigger_critical(self, telemetry: VisionTelemetry, now: float) -> tuple[bool, str]:
-        """Evaluates if new critical objects (e.g., person, fire, weapons) appeared or changed."""
+        """Evaluates if restricted zone intrusion occurred or new critical objects appeared."""
+        # 1. Immediate trigger for restricted zone intrusion
+        if getattr(telemetry, "intrusion_detected", False):
+            # Trigger immediately if it's a new intrusion or after cooldown
+            if not self.prev_intrusion_detected or (now - self.last_critical_audit_time >= self.critical_cooldown):
+                intruder_count = sum(1 for d in telemetry.detections if getattr(d, "is_intrusion", False))
+                reason = f"CRITICAL RESTRICTED ZONE INTRUSION: {intruder_count} person(s) entered the hazardous machinery ROI!"
+                return True, reason
+
         if (now - self.last_critical_audit_time) < self.critical_cooldown:
             return False, ""
 
@@ -211,14 +259,37 @@ class LiveStreamAuditor:
                 )
                 await self.websocket.send_text(telemetry_msg.model_dump_json())
 
-                # 5. Check LangChain Throttling Rules:
+                # 5. Instant Alert Notification Dispatch:
+                # Dispatches immediate webhook notification upon restricted zone breach
+                if getattr(telemetry, "intrusion_detected", False) and not self.prev_intrusion_detected:
+                    intruder_cnt = sum(1 for d in telemetry.detections if getattr(d, "is_intrusion", False))
+                    asyncio.create_task(
+                        self._dispatch_webhook_alert(
+                            timestamp=current_iso,
+                            alert_type="ZONE_INTRUSION",
+                            telemetry=telemetry,
+                            reason=f"Restricted Zone Breach Detected: {intruder_cnt} intruder(s) in hazard ROI"
+                        )
+                    )
+
+                # 6. Check LangChain Throttling Rules:
                 # Respect active backoff pause and check if no audit is in-flight
                 if now >= self.backoff_until and (self.active_audit_task is None or self.active_audit_task.done()):
-                    # Rule A: Critical Object Trigger
+                    # Rule A: Critical Object / Intrusion Trigger (bypasses 15s periodic interval)
                     should_crit, crit_reason = self._should_trigger_critical(telemetry, now)
                     if should_crit:
                         self.last_critical_audit_time = now
                         self.last_periodic_audit_time = now  # Reset periodic timer
+                        # Also dispatch webhook alert if not already sent by new intrusion check
+                        if not (getattr(telemetry, "intrusion_detected", False) and not self.prev_intrusion_detected):
+                            asyncio.create_task(
+                                self._dispatch_webhook_alert(
+                                    timestamp=current_iso,
+                                    alert_type="ZONE_INTRUSION" if getattr(telemetry, "intrusion_detected", False) else "CRITICAL_VIOLATION",
+                                    telemetry=telemetry,
+                                    reason=crit_reason
+                                )
+                            )
                         self.active_audit_task = asyncio.create_task(
                             self._dispatch_llm_audit(
                                 telemetry=telemetry,
@@ -226,7 +297,7 @@ class LiveStreamAuditor:
                                 event_type=StreamEventType.CRITICAL_ALERT
                             )
                         )
-                    # Rule B: Periodic Interval Trigger (e.g. every 10 seconds summary)
+                    # Rule B: Periodic Interval Trigger (e.g. every 10-15 seconds summary)
                     elif (now - self.last_periodic_audit_time) >= self.audit_interval:
                         self.last_periodic_audit_time = now
                         reason = f"Periodic {int(self.audit_interval)}-second facility audit summary"
@@ -238,7 +309,8 @@ class LiveStreamAuditor:
                             )
                         )
 
-                # Update critical count memory
+                # Update intrusion state and critical count memory
+                self.prev_intrusion_detected = getattr(telemetry, "intrusion_detected", False)
                 self.prev_critical_counts = {
                     cls_name.lower(): count
                     for cls_name, count in telemetry.class_counts.items()

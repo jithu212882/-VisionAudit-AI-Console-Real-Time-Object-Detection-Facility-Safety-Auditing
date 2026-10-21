@@ -61,6 +61,11 @@ class ReasoningService:
                 "1. Safety: Physical hazard risks, worker proximity to equipment, safety compliance, emergency egress clear zones.\n"
                 "2. Inventory: Asset counts, inventory density, misplaced equipment, stock presence.\n"
                 "3. Operational Risk: Flow bottlenecks, congested paths, unmonitored active items, workflow disruptions.\n\n"
+                "CRITICAL SAFETY RULE FOR RESTRICTED ZONE INTRUSIONS:\n"
+                "If 'Hazard / Intrusion Telemetry' flags an active restricted zone intrusion (intrusion_detected = True or marked [RESTRICTED ZONE INTRUSION DETECTED!]), "
+                "you MUST immediately categorize this as an urgent HIGH severity Safety incident report. "
+                "Provide an unambiguous observation identifying the unauthorized entry into the restricted hazard area and "
+                "recommend immediate operational actions (e.g., sound emergency audible alarm, halt hazardous machinery, dispatch safety personnel).\n\n"
                 "For every finding, assign a valid category (Safety, Inventory, or Operational Risk), "
                 "a calibrated severity level (LOW, MEDIUM, HIGH), an evidence-based observation, "
                 "and an actionable recommendation.\n\n"
@@ -72,6 +77,7 @@ class ReasoningService:
                 "Conduct a comprehensive facility audit based on the following vision telemetry data:\n\n"
                 "Contextual Timestamp: {timestamp}\n"
                 "Total Entities Detected: {total_detections}\n"
+                "Hazard / Intrusion Telemetry:\n{intrusion_telemetry}\n\n"
                 "Class Occurrence Summary:\n{class_counts}\n\n"
                 "Object Bounding Coordinates & Confidence:\n{detection_details}\n"
             ),
@@ -87,8 +93,9 @@ class ReasoningService:
 
         lines = []
         for idx, det in enumerate(detections[:max_items], 1):
+            intrusion_tag = " >>> [RESTRICTED ZONE INTRUSION DETECTED!] <<<" if getattr(det, "is_intrusion", False) else ""
             lines.append(
-                f"- #{idx} Class: {det.class_name} | Confidence: {det.confidence:.2f} | BBox [x1, y1, x2, y2]: {det.box}"
+                f"- #{idx} Class: {det.class_name}{intrusion_tag} | Confidence: {det.confidence:.2f} | BBox [x1, y1, x2, y2]: {det.box}"
             )
         if len(detections) > max_items:
             lines.append(f"... and {len(detections) - max_items} more detections.")
@@ -102,9 +109,16 @@ class ReasoningService:
 
         formatted_counts = json.dumps(telemetry.class_counts, indent=2)
         formatted_details = self._format_detection_details(telemetry.detections)
+        intrusion_telemetry = (
+            "🚨 CRITICAL ALERT: RESTRICTED HAZARD ZONE INTRUSION DETECTED! "
+            "One or more persons have entered the hazardous machinery/restricted safety boundary."
+            if getattr(telemetry, "intrusion_detected", False)
+            else "NORMAL: No restricted hazard zone intrusions detected."
+        )
         payload = {
             "timestamp": timestamp,
             "total_detections": telemetry.total_count,
+            "intrusion_telemetry": intrusion_telemetry,
             "class_counts": formatted_counts,
             "detection_details": formatted_details,
         }
