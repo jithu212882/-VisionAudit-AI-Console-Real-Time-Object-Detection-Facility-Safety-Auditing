@@ -913,6 +913,15 @@
 
             container.prepend(card);
         }
+
+        // Global keyboard shortcut: Press Space to toggle Connect/Disconnect
+        document.addEventListener("keydown", (e) => {
+            if (["INPUT", "TEXTAREA"].includes(document.activeElement.tagName)) return;
+            if (e.code === "Space") {
+                e.preventDefault();
+                toggleConnect();
+            }
+        });
     </script>
 </body>
 </html>
