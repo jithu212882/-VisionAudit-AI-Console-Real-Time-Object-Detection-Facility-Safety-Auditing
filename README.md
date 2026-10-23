@@ -238,3 +238,23 @@ python test_desktop_view.py --source 0
 ```
 *Press 'q' or ESC in the window to exit.*
 
+---
+
+## 🚪 Face Recognition Access Control & 3D Door Simulator
+
+A standalone biometric security access module with admin personnel onboarding, real-time webcam scanning with face bounding boxes, and an interactive CSS 3D animated security door chamber.
+
+### Endpoints
+- `GET /door-demo`: Interactive 3-panel browser demo (Admin Enrollment, Live Scanner, 3D Door Simulator & Real-time Audit Logs).
+- `POST /admin/register-face`: Enrolls personnel by extracting 128-D ArcFace/SFace facial embeddings and caching them in memory & JSON storage.
+- `GET /admin/users`: Returns list of enrolled personnel with avatars, roles, and timestamps.
+- `DELETE /admin/users/{name}`: De-registers personnel from the access control database.
+- `POST /verify-access`: Compares an incoming cropped face/frame or embedding vector against enrolled personnel using cosine similarity (threshold = 0.60).
+  * Returns: `{"access_granted": true/false, "matched_name": "...", "confidence": 0.94, "timestamp": "..."}`.
+
+### Run Automated Tests
+```bash
+python test_access_control.py
+```
+
+

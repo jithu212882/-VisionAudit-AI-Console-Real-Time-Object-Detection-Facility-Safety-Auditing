@@ -36,7 +36,15 @@ scratch/
 tmp/
 *.tmp
 
+# Models and Datasets
+models/
+*.onnx
+
+# Data and Runtime storage
+data/
+
 # Operating System Files
 .DS_Store
 Thumbs.db
 Desktop.ini
+

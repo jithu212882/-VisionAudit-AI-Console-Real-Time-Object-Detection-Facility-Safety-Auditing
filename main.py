@@ -6,7 +6,9 @@ from fastapi.responses import JSONResponse, FileResponse
 
 from config import settings
 from routers.audit import router as audit_router
+from routers.access_control import router as access_control_router
 from services.vision import vision_service
+from services.face_service import face_service
 from services.live_stream import LiveStreamAuditor
 
 # Configure structured logging
@@ -100,6 +102,11 @@ async def get_dashboard():
     return FileResponse("live_dashboard.html")
 
 
+@app.get("/door-demo", tags=["Dashboard"], summary="Face Recognition Access Control & 3D Door Simulator")
+async def get_door_demo():
+    return FileResponse("face_door_demo.html")
+
+
 @app.get("/", tags=["Health & Status"], summary="Root service discovery")
 async def root():
     return {
@@ -107,13 +114,21 @@ async def root():
         "version": settings.app_version,
         "docs": "/docs",
         "dashboard": "/dashboard",
+        "door_demo": "/door-demo",
         "audit_endpoint": f"{settings.api_v1_prefix}/audit/analyze-frame",
+        "access_verify_endpoint": "/verify-access",
+        "admin_register_endpoint": "/admin/register-face",
+        "admin_users_endpoint": "/admin/users",
         "live_audit_websocket": "/ws/live-audit"
     }
 
 
 # Mount API routers
 app.include_router(audit_router, prefix=settings.api_v1_prefix)
+app.include_router(access_control_router, prefix=settings.api_v1_prefix)
+# Direct root-level aliases for /admin/register-face, /admin/users, and /verify-access
+app.include_router(access_control_router)
+
 
 
 # Root-level live audit WebSocket alias
